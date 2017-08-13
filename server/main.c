@@ -5,7 +5,7 @@
 
 int main() {
 	WSADATA wsa;
-	SOCKET sock;
+	SOCKET sock, clientsock;
 	struct sockaddr_in server, client;
 	int returnvalue;
 
@@ -25,21 +25,24 @@ int main() {
 
 	returnvalue = bind(sock, (struct sockaddr *)&server, sizeof(server));
 	if (returnvalue == SOCKET_ERROR) {
-		printf("%i", WSAGetLastError());
-		while (1 == 1) {
-			//see things
-		};
 		return 3;
 	};
 
 	listen(sock, 3);
 
-	int clientsize = sizeof(struct sockaddr_in);
-	while (accept(sock, (struct sockaddr *)&client, &clientsize) != INVALID_SOCKET) {
-		/*char buffer[2];
-		recv(sock, buffer, sizeof(buffer), 0);
-		buffer[2] = '\0';
-		printf("Message received: %s\n", buffer);*/
+	int clientsize = sizeof(server);
+	clientsock = accept(sock, (struct sockaddr *)&client, &clientsize);
+	bool isAlive = true;
+	while (isAlive) {
+		char buffer[2];
+		returnvalue = recv(clientsock, buffer, sizeof(buffer), 0);
+		if (returnvalue > 0) {
+			buffer[1] = '\0';
+			printf("Message received: %s\n", buffer);
+		}
+		else {
+			isAlive = false;
+		};
 	};
 
 	closesocket(sock);
