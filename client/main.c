@@ -5,9 +5,10 @@
 #pragma comment(lib, "ws2_32.lib")
 
 struct fileTransferData {
+	int fileid;
 	int totalsize;
 	int chunks;
-	int chunksize = 10; //size of each packet
+	int chunksize = 12; //size of each packet, 1 character for fileid, 10 for text, 1 for null terminator
 	char *rawfile;
 	char **segments;
 };
@@ -60,28 +61,24 @@ int main() {
 		ftdata.chunks = (ftdata.totalsize / ftdata.chunksize) + 1;
 	};
 
+	ftdata.fileid = 1;
 	ftdata.segments = (char **)malloc(sizeof(char *) * ftdata.chunks);
 	for (int i = 0; i < ftdata.chunks; i++) {
 		int marker = i * ftdata.chunksize;
-		char* chunk = (char *)malloc(ftdata.chunksize + 1);
+		char * chunk = (char *)malloc(ftdata.chunksize);
 
-		strncpy(chunk, ftdata.rawfile + marker, ftdata.chunksize);
+		chunk[0] = ftdata.fileid + '0'; //for some reason this works
+		strncpy(chunk + 1, ftdata.rawfile + marker, ftdata.chunksize);
+		chunk[ftdata.chunksize - 1] = '\0';
 		ftdata.segments[i] = chunk;
-		chunk[10] = '\0';
 	};
 
 	for (int i = 0; i < ftdata.chunks; i++) {
-		printf("%s\n", ftdata.segments[i]);
+		send(sock, ftdata.segments[i], ftdata.chunksize, 0);
 	};
 
-	/*char buffer[2];
-	buffer[0] = 'a';
-	returnvalue = send(sock, buffer, sizeof(buffer), 0);
-	if (returnvalue == SOCKET_ERROR) {
-		return 4;
-	};*/
 	while (true) {
-		//just so i can make sure packets go between the two
+		//not even sure what this is for anymore
 	};
 
 	closesocket(sock);
