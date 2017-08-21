@@ -8,7 +8,8 @@ struct fileTransferData {
 	int fileid;
 	int totalsize;
 	int chunks;
-	int chunksize = 12; //size of each packet, 1 character for fileid, 10 for text, 1 for null terminator
+	int chunksize = 10; //size of each packet
+	int protocolsize = 6; //1 character for fileid, 4 for length  of rawfile, 1 for null terminator
 	char *rawfile;
 	char **segments;
 };
@@ -65,19 +66,43 @@ int main() {
 	ftdata.segments = (char **)malloc(sizeof(char *) * ftdata.chunks);
 	for (int i = 0; i < ftdata.chunks; i++) {
 		int marker = i * ftdata.chunksize;
-		char * chunk = (char *)malloc(ftdata.chunksize);
+		if (i == 0) {
+			char * chunk = (char *)malloc(ftdata.chunksize + ftdata.protocolsize);
+			chunk[0] = ftdata.fileid + '0'; //for some reason this works
 
-		chunk[0] = ftdata.fileid + '0'; //for some reason this works
-		strncpy(chunk + 1, ftdata.rawfile + marker, ftdata.chunksize);
-		chunk[ftdata.chunksize - 1] = '\0';
-		ftdata.segments[i] = chunk;
+			//convert ftdata.totalsize to a series of 4 chars
+			for (int i = 0; i < ftdata.protocolsize - 1; i++) {
+				unsigned int totalsizebyte = ftdata.totalsize;
+				totalsizebyte = totalsizebyte << 8 * (i);
+				totalsizebyte = totalsizebyte >> 24;
+				chunk[i + 1] = (char)totalsizebyte;
+			};
+
+			chunk[(ftdata.chunksize + ftdata.protocolsize) - 1] = '\0'; //null terminate
+
+			strncpy((chunk + ftdata.protocolsize) - 1, ftdata.rawfile + marker, ftdata.chunksize);
+			ftdata.segments[i] = chunk;
+		}
+		else {
+			char * chunk = (char *)malloc(ftdata.chunksize + 1);
+			chunk[0] = ftdata.fileid + '0'; //for some reason this works
+			chunk[ftdata.chunksize] = '\0'; //null terminate
+
+			strncpy(chunk, ftdata.rawfile + marker, ftdata.chunksize);
+			ftdata.segments[i] = chunk;
+		};
 	};
 
 	for (int i = 0; i < ftdata.chunks; i++) {
-		send(sock, ftdata.segments[i], ftdata.chunksize, 0);
+		if (i == 0) {
+			send(sock, ftdata.segments[i], ftdata.chunksize + ftdata.protocolsize, 0);
+		}
+		else {
+			send(sock, ftdata.segments[i], ftdata.chunksize + 1, 0);
+		};
 	};
 
-	while (true) {
+	while (1) {
 		//not even sure what this is for anymore
 	};
 
