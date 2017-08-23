@@ -66,8 +66,8 @@ int main() {
 	ftdata.segments = (char **)malloc(sizeof(char *) * ftdata.chunks);
 	for (int i = 0; i < ftdata.chunks; i++) {
 		int marker = i * ftdata.chunksize;
+		char * chunk = (char *)malloc(ftdata.chunksize + ftdata.protocolsize);
 		if (i == 0) {
-			char * chunk = (char *)malloc(ftdata.chunksize + ftdata.protocolsize);
 			chunk[0] = ftdata.fileid + '0'; //for some reason this works
 
 			//convert ftdata.totalsize to a series of 4 chars
@@ -77,29 +77,21 @@ int main() {
 				totalsizebyte = totalsizebyte >> 24;
 				chunk[i + 1] = (char)totalsizebyte;
 			};
-
-			chunk[(ftdata.chunksize + ftdata.protocolsize) - 1] = '\0'; //null terminate
-
-			strncpy((chunk + ftdata.protocolsize) - 1, ftdata.rawfile + marker, ftdata.chunksize);
-			ftdata.segments[i] = chunk;
 		}
-		else {
-			char * chunk = (char *)malloc(ftdata.chunksize + 1);
-			chunk[0] = ftdata.fileid + '0'; //for some reason this works
-			chunk[ftdata.chunksize] = '\0'; //null terminate
-
-			strncpy(chunk, ftdata.rawfile + marker, ftdata.chunksize);
-			ftdata.segments[i] = chunk;
+		else { //keep packets the same size without resending packet data
+			for (int y = 0; y < 5; y++) {
+				chunk[y] = '.';
+			};
 		};
+
+        chunk[(ftdata.chunksize + ftdata.protocolsize) - 1] = '\0'; //null terminate
+		strncpy((chunk + ftdata.protocolsize) - 1, ftdata.rawfile + marker, ftdata.chunksize);
+
+		ftdata.segments[i] = chunk;
 	};
 
 	for (int i = 0; i < ftdata.chunks; i++) {
-		if (i == 0) {
-			send(sock, ftdata.segments[i], ftdata.chunksize + ftdata.protocolsize, 0);
-		}
-		else {
-			send(sock, ftdata.segments[i], ftdata.chunksize + 1, 0);
-		};
+		send(sock, ftdata.segments[i], ftdata.chunksize + ftdata.protocolsize, 0);
 	};
 
 	while (1) {
