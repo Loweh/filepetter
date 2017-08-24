@@ -3,12 +3,19 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 
+struct fileTransferData {
+	int chunksize = 10;
+	int protocolsize = 6;
+	int filesize = 0;
+	int bytesreceived = 0;
+	char *rawfile;
+};
+
 int main() {
 	WSADATA wsa;
 	SOCKET sock, clientsock;
 	struct sockaddr_in server, client;
-	int packetsize = 10;
-	int protocolsize = 6;
+	fileTransferData ftdata;
 	int returnvalue;
 
 	returnvalue = WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -35,36 +42,36 @@ int main() {
 	int clientsize = sizeof(server);
 	clientsock = accept(sock, (struct sockaddr *)&client, &clientsize);
 
-	char *file; //temporary
-	int chunks = 0; //also temporary
 	int isAlive = 1;
 	while (isAlive) {
-		char *buffer = (char *)malloc(packetsize + protocolsize);
-		returnvalue = recv(clientsock, buffer, packetsize + protocolsize, 0);
+		char *buffer = (char *)malloc(ftdata.chunksize + ftdata.protocolsize);
+		returnvalue = recv(clientsock, buffer, ftdata.chunksize + ftdata.protocolsize, 0);
 		if (returnvalue > 0) {
 			if (buffer[0] == '1') {
-				int filesize = 0;
 				for (int i = 0; i < 4; i++) {
 					int filesizebyte = buffer[i + 1];
 					filesizebyte = filesizebyte << 8 * (3 - i);
-					filesize = filesize | filesizebyte;
+					ftdata.filesize = ftdata.filesize | filesizebyte;
 				};
 
-				file = (char *)malloc(filesize);
+				ftdata.rawfile = (char *)malloc(ftdata.filesize);
 			};
 
-			strncpy(file + (10 * chunks), buffer + protocolsize - 1, packetsize);
-			chunks++;
+			strncpy(ftdata.rawfile + (ftdata.bytesreceived), buffer + ftdata.protocolsize - 1, ftdata.chunksize);
+			ftdata.bytesreceived = ftdata.bytesreceived + ftdata.chunksize;
+
+			//pretty much the only place i can probably fit this (please kill me i hate my code)
+			if (ftdata.bytesreceived >= ftdata.filesize) {
+				FILE *file = fopen("test.txt", "wb");
+				fwrite(ftdata.rawfile, ftdata.filesize, 1, file);
+				fclose(file);
+			};
 		} else {
 			isAlive = false;
 			free(buffer);
 		};
 	};
 
-	printf("%s", file);
-	while (1) {
-		//more debugging stuff
-	};
 	closesocket(sock);
 	WSACleanup();
 	return 0;
