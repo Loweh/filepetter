@@ -41,7 +41,7 @@ int main() {
 		return 3;
 	};
 
-	testfile = fopen("test.txt", "r+");
+	testfile = fopen("test.txt", "rb");
 	if (testfile == NULL) {
 		return 4;
 	};
