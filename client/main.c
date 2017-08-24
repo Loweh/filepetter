@@ -10,6 +10,7 @@ struct fileTransferData {
 	int chunks;
 	int chunksize = 10; //size of each packet
 	int protocolsize = 6; //1 character for fileid, 4 for length  of rawfile, 1 for null terminator
+	char *filename;
 	char *rawfile;
 	char **segments;
 };
@@ -41,7 +42,8 @@ int main() {
 		return 3;
 	};
 
-	testfile = fopen("test.txt", "rb");
+	ftdata.filename = "test.txt";
+	testfile = fopen(ftdata.filename, "rb");
 	if (testfile == NULL) {
 		return 4;
 	};
@@ -56,17 +58,18 @@ int main() {
 
 	returnvalue = ftdata.totalsize % ftdata.chunksize;
 	if (returnvalue == 0) {
-		ftdata.chunks = ftdata.totalsize / ftdata.chunksize;
+		ftdata.chunks = (ftdata.totalsize / ftdata.chunksize) + 1; //this is to account for the first packet, which sends the filename
 	}
 	else {
-		ftdata.chunks = (ftdata.totalsize / ftdata.chunksize) + 1;
+		ftdata.chunks = (ftdata.totalsize / ftdata.chunksize) + 2; //would be + 1 to round up, but again, must account for the first packet
 	};
 
 	ftdata.fileid = 1;
 	ftdata.segments = (char **)malloc(sizeof(char *) * ftdata.chunks);
 	for (int i = 0; i < ftdata.chunks; i++) {
-		int marker = i * ftdata.chunksize;
+		int marker = (i - 1) * ftdata.chunksize;
 		char * chunk = (char *)malloc(ftdata.chunksize + ftdata.protocolsize);
+
 		if (i == 0) {
 			chunk[0] = ftdata.fileid + '0'; //for some reason this works
 
@@ -77,16 +80,17 @@ int main() {
 				totalsizebyte = totalsizebyte >> 24;
 				chunk[i + 1] = (char)totalsizebyte;
 			};
-		}
-		else { //keep packets the same size without resending packet data
+
+			strncpy((chunk + ftdata.protocolsize) - 1, ftdata.filename, ftdata.chunksize);
+		} else { //keep packets the same size without resending packet data
 			for (int y = 0; y < 5; y++) {
 				chunk[y] = '.';
 			};
+
+			strncpy((chunk + ftdata.protocolsize) - 1, ftdata.rawfile + marker, ftdata.chunksize);
 		};
 
-        chunk[(ftdata.chunksize + ftdata.protocolsize) - 1] = '\0'; //null terminate
-		strncpy((chunk + ftdata.protocolsize) - 1, ftdata.rawfile + marker, ftdata.chunksize);
-
+		chunk[(ftdata.chunksize + ftdata.protocolsize) - 1] = '\0'; //null terminate
 		ftdata.segments[i] = chunk;
 	};
 
