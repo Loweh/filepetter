@@ -50,11 +50,12 @@ int main() {
 		if (returnvalue > 0) {
 			if (buffer[0] == '1') {
 				for (int i = 0; i < 4; i++) {
-					int filesizebyte = buffer[i + 1];
+					int filesizebyte = (unsigned char)buffer[i + 1];
 					filesizebyte = filesizebyte << 8 * (3 - i);
 					ftdata.filesize = ftdata.filesize | filesizebyte;
 				};
 
+				printf("%i", ftdata.filesize);
 				ftdata.filename = buffer + ftdata.protocolsize - 1;
 				ftdata.rawfile = (char *)malloc(ftdata.filesize);
 			}
