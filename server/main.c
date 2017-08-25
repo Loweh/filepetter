@@ -8,6 +8,7 @@ struct fileTransferData {
 	int protocolsize = 6;
 	int filesize = 0;
 	int bytesreceived = 0;
+	char* filename;
 	char *rawfile;
 };
 
@@ -54,15 +55,17 @@ int main() {
 					ftdata.filesize = ftdata.filesize | filesizebyte;
 				};
 
+				ftdata.filename = buffer + ftdata.protocolsize - 1;
 				ftdata.rawfile = (char *)malloc(ftdata.filesize);
+			}
+			else {
+				strncpy(ftdata.rawfile + (ftdata.bytesreceived), buffer + ftdata.protocolsize - 1, ftdata.chunksize);
+				ftdata.bytesreceived = ftdata.bytesreceived + ftdata.chunksize;
 			};
-
-			strncpy(ftdata.rawfile + (ftdata.bytesreceived), buffer + ftdata.protocolsize - 1, ftdata.chunksize);
-			ftdata.bytesreceived = ftdata.bytesreceived + ftdata.chunksize;
 
 			//pretty much the only place i can probably fit this (please kill me i hate my code)
 			if (ftdata.bytesreceived >= ftdata.filesize) {
-				FILE *file = fopen("test.txt", "wb");
+				FILE *file = fopen(ftdata.filename, "wb");
 				fwrite(ftdata.rawfile, ftdata.filesize, 1, file);
 				fclose(file);
 			};
