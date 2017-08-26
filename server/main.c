@@ -11,7 +11,7 @@ struct socketData {
 };
 
 struct fileTransferData {
-	int chunksize = 10;
+	int chunksize = 507;
 	int protocolsize = 5;
 	int filesize = 0;
 	int bytesreceived = 0;

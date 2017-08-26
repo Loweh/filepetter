@@ -14,14 +14,13 @@ struct socketData {
 
 struct fileTransferData {
 	FILE *file;
-	int packetid;
+	int packetid = 1;
 	int totalsize;
 	int chunks;
-	int chunksize = 10; //size of each packet
+	int chunksize = 507; //size of each packet
 	int protocolsize = 5; //1 character for packetid, 4 for length  of rawfile
 	char *filename;
 	char *rawfile;
-	char **segments;
 };
 
 int main() {
@@ -70,8 +69,6 @@ int main() {
 		ftdata.chunks = (ftdata.totalsize / ftdata.chunksize) + 2; //would be + 1 to round up, but again, must account for the first packet
 	};
 
-	ftdata.packetid = 1;
-	ftdata.segments = (char **)malloc(sizeof(char *) * ftdata.chunks);
 	for (int i = 0; i < ftdata.chunks; i++) {
 		int marker = (i - 1) * ftdata.chunksize;
 		char * chunk = (char *)malloc(ftdata.chunksize + ftdata.protocolsize);
@@ -96,16 +93,10 @@ int main() {
 			strncpy(chunk + ftdata.protocolsize, ftdata.rawfile + marker, ftdata.chunksize);
 		};
 
-		ftdata.segments[i] = chunk;
-	};
-
-	for (int i = 0; i < ftdata.chunks; i++) {
-		send(sockdata.sock, ftdata.segments[i], ftdata.chunksize + ftdata.protocolsize, 0);
-		free(ftdata.segments[i]);
+		send(sockdata.sock, chunk, ftdata.chunksize + ftdata.protocolsize, 0);
 	};
 
 	free(ftdata.rawfile);
-	free(ftdata.segments);
 
 	closesocket(sockdata.sock);
 	WSACleanup();
