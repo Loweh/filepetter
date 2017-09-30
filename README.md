@@ -1,4 +1,4 @@
-# socketpetter
+# filepetter
 
 An "FTP" client and server.
 
